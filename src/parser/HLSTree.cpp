@@ -1104,7 +1104,13 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
     {
       auto attribs = ParseTagAttributes(tagValue);
 
-      if (!STRING::KeyExists(attribs, "BANDWIDTH"))
+      std::string bandwidth;
+      // prefer average bandwidth
+      if (STRING::KeyExists(attribs, "AVERAGE-BANDWIDTH"))
+        bandwidth = attribs["AVERAGE-BANDWIDTH"];
+      else if (STRING::KeyExists(attribs, "BANDWIDTH"))
+        bandwidth = attribs["BANDWIDTH"];
+      else
       {
         LOG::LogF(LOGERROR, "Skipped EXT-X-STREAM-INF due to to missing bandwidth attribute (%s)",
                   tagValue.c_str());
@@ -1124,7 +1130,7 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
       }
 
       Variant var;
-      var.m_bandwidth = STRING::ToUint32(attribs["BANDWIDTH"]);
+      var.m_bandwidth = STRING::ToUint32(bandwidth);
       var.m_codecs = attribs["CODECS"];
       var.m_resolution = attribs["RESOLUTION"];
       if (STRING::KeyExists(attribs, "FRAME-RATE"))
