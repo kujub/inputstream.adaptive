@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon
   id="inputstream.adaptive"
-  version="21.20240526"
+  version="21.20240529"
   name="InputStream Adaptive"
   provider-name="kujub, peak3d, Team Kodi">
   <requires>@ADDON_DEPENDS@</requires>
