@@ -596,7 +596,7 @@ bool adaptive::CHLSTree::ParseChildManifest(const std::string& data,
 
   if (adp->GetStreamType() != StreamType::SUBTITLE)
     m_totalTimeSecs = totalTimeSecs;
-  
+
   // If you pause the video and after some time you want to continue the playback,
   // its possible that we need to continue with this period (lost),
   // or, that segments on current period (lost) cannot be downloaded because too old
@@ -1104,13 +1104,7 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
     {
       auto attribs = ParseTagAttributes(tagValue);
 
-      std::string bandwidth;
-      // prefer average bandwidth
-      if (STRING::KeyExists(attribs, "AVERAGE-BANDWIDTH"))
-        bandwidth = attribs["AVERAGE-BANDWIDTH"];
-      else if (STRING::KeyExists(attribs, "BANDWIDTH"))
-        bandwidth = attribs["BANDWIDTH"];
-      else
+      if (!STRING::KeyExists(attribs, "BANDWIDTH"))
       {
         LOG::LogF(LOGERROR, "Skipped EXT-X-STREAM-INF due to to missing bandwidth attribute (%s)",
                   tagValue.c_str());
@@ -1129,8 +1123,23 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
         continue;
       }
 
+      // Work around broken very high peak bandwidth to avoid very low resolution
+      //! @todo: This is likely to cause buffering pauses. Implement setting value.
+      uint32_t bandwidth = STRING::ToUint32(attribs["BANDWIDTH"]);
+      if (STRING::KeyExists(attribs, "AVERAGE-BANDWIDTH"))
+      {
+        uint32_t averageBandwidth = STRING::ToUint32(attribs["AVERAGE-BANDWIDTH"]);
+        uint32_t bandwidthLimit = averageBandwidth / 2 * 3;
+        if (bandwidth > bandwidthLimit)
+        {
+          LOG::Log(LOGWARNING, "Working around very high EXT-X-STREAM-INF peak/avg-bandwidth ratio (%s)",
+                   tagValue.c_str());
+          bandwidth = bandwidthLimit;
+        }
+      }
+
       Variant var;
-      var.m_bandwidth = STRING::ToUint32(bandwidth);
+      var.m_bandwidth = bandwidth;
       var.m_codecs = attribs["CODECS"];
       var.m_resolution = attribs["RESOLUTION"];
       if (STRING::KeyExists(attribs, "FRAME-RATE"))
