@@ -29,14 +29,14 @@ public:
   CHLSTree();
   virtual ~CHLSTree() {}
 
-  virtual TreeType GetTreeType() override { return TreeType::HLS; }
+  virtual TreeType GetTreeType() const override { return TreeType::HLS; }
 
   CHLSTree(const CHLSTree& left);
 
   virtual CHLSTree* Clone() const override { return new CHLSTree{*this}; }
 
   virtual void Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                         std::string_view supportedKeySystem,
+                         std::vector<std::string_view> supportedKeySystems,
                          std::string_view manifestUpdateParam) override;
 
   virtual bool Open(std::string_view url,

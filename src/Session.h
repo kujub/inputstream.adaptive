@@ -30,6 +30,8 @@ public:
   CSession(const std::string& manifestUrl);
   virtual ~CSession();
 
+  void DeleteStreams();
+
   /*! \brief Initialize the session
    *  \return True if has success, false otherwise
    */
@@ -113,11 +115,17 @@ public:
    */
   unsigned int GetStreamCount() const { return static_cast<unsigned int>(m_streams.size()); }
 
+  /*!
+   * \brief Determines if the CDM session at specified index require Secure Path (TEE).
+   * \return True if Secure Path is required, otherwise false.
+   */
+  bool IsCDMSessionSecurePath(size_t index);
+
   /*! \brief Get a session string (session id) by index from the cdm sessions
    *  \param index The index (psshSet number) of the cdm session
    *  \return The session string
    */
-  const char* GetCDMSession(unsigned int index) { return m_cdmSessions[index].m_cdmSessionStr; }
+  const char* GetCDMSession(unsigned int index);
 
   /*! \brief Get the media type mask
    *  \return The media type mask
@@ -128,10 +136,7 @@ public:
    *  \param index The index (psshSet number) of the cdm session
    *  \return The single sample decrypter
    */
-  Adaptive_CencSingleSampleDecrypter* GetSingleSampleDecryptor(unsigned int index) const
-  {
-    return m_cdmSessions[index].m_cencSingleSampleDecrypter;
-  }
+  Adaptive_CencSingleSampleDecrypter* GetSingleSampleDecryptor(unsigned int index) const;
 
   /*! \brief Get the decrypter (DRM lib)
    *  \return The decrypter
@@ -311,12 +316,20 @@ public:
    */
   void OnStreamChange(adaptive::AdaptiveStream* adStream) override;
 
+  /*!
+   * \brief Callback from CInputStreamAdaptive::GetStream.
+   * \param streamid The requested stream id
+   * \param info The stream info object (can be updated)
+   * \return True to allow Kodi core to load the stream, otherwise false
+   */
+  bool OnGetStream(int streamid, kodi::addon::InputstreamInfo& info);
+
 protected:
   /*! \brief Check for and load decrypter module matching the supplied key system
    *  \param key_system [OUT] Will be assigned to if a decrypter is found matching
    *                    the set license type
    */
-  void SetSupportedDecrypterURN(std::string& key_system);
+  void SetSupportedDecrypterURN(std::vector<std::string_view>& keySystems);
 
   /*! \brief Destroy all CencSingleSampleDecrypter instances
    */
@@ -328,7 +341,7 @@ protected:
 
   bool ExtractStreamProtectionData(PLAYLIST::CPeriod::PSSHSet& sessionPsshset,
                                    std::vector<uint8_t>& initData,
-                                   std::string keySystem);
+                                   std::vector<std::string_view> keySystems);
 
 private:
   std::string m_manifestUrl;

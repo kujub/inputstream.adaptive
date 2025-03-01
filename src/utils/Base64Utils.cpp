@@ -10,6 +10,8 @@
 
 #include "log.h"
 
+#include <regex>
+
 using namespace UTILS::BASE64;
 
 namespace
@@ -41,7 +43,10 @@ constexpr unsigned char BASE64_TABLE[] = {
 // clang-format on
 } // namespace
 
-void UTILS::BASE64::Encode(const uint8_t* input, const size_t length, std::string& output)
+void UTILS::BASE64::Encode(const uint8_t* input,
+                           const size_t length,
+                           std::string& output,
+                           const bool padding /* = true */)
 {
   if (input == nullptr || length == 0)
     return;
@@ -65,40 +70,45 @@ void UTILS::BASE64::Encode(const uint8_t* input, const size_t length, std::strin
       output.push_back(CHARACTERS[(l >> 0) & 0x3F]);
   }
 
-  int left = 3 - (length % 3);
-
-  if (length % 3)
+  if (padding)
   {
-    for (int i = 0; i < left; i++)
-      output.push_back(PADDING);
+    const int left = 3 - (length % 3);
+
+    if (length % 3)
+    {
+      for (int i = 0; i < left; ++i)
+        output.push_back(PADDING);
+    }
   }
 }
 
-std::string UTILS::BASE64::Encode(const uint8_t* input, const size_t length)
+std::string UTILS::BASE64::Encode(const uint8_t* input,
+                                  const size_t length,
+                                  const bool padding /* = true */)
 {
   std::string output;
-  Encode(input, length, output);
+  Encode(input, length, output, padding);
   return output;
 }
 
-std::string UTILS::BASE64::Encode(const std::vector<uint8_t>& input)
+std::string UTILS::BASE64::Encode(const std::vector<uint8_t>& input, const bool padding /* = true */)
 {
   std::string output;
-  Encode(input.data(), input.size(), output);
+  Encode(input.data(), input.size(), output, padding);
   return output;
 }
 
-std::string UTILS::BASE64::Encode(const std::vector<char>& input)
+std::string UTILS::BASE64::Encode(const std::vector<char>& input, const bool padding /* = true */)
 {
   std::string output;
-  Encode(reinterpret_cast<const uint8_t*>(input.data()), input.size(), output);
+  Encode(reinterpret_cast<const uint8_t*>(input.data()), input.size(), output, padding);
   return output;
 }
 
-std::string UTILS::BASE64::Encode(const std::string& inputStr)
+std::string UTILS::BASE64::Encode(const std::string& inputStr, const bool padding /* = true */)
 {
   std::string output;
-  Encode(reinterpret_cast<const uint8_t*>(inputStr.data()), inputStr.size(), output);
+  Encode(reinterpret_cast<const uint8_t*>(inputStr.data()), inputStr.size(), output, padding);
   return output;
 }
 
@@ -199,4 +209,52 @@ std::string UTILS::BASE64::DecodeToStr(std::string_view input)
   std::vector<uint8_t> output;
   Decode(input.data(), input.size(), output);
   return {output.begin(), output.end()};
+}
+
+bool UTILS::BASE64::IsValidBase64(const std::string& input)
+{
+  // Check for empty input or incorrect length
+  if (input.empty() || input.size() % 4 != 0)
+    return false;
+
+  // Use a lookup table for faster character checking
+  bool lookup[256]{};
+  for (char c : CHARACTERS)
+  {
+    lookup[static_cast<unsigned char>(c)] = true;
+  }
+
+  // Iterate over the input string and check each character
+  size_t paddingSize = 0;
+  for (size_t i = 0; i < input.size(); ++i)
+  {
+    if (input[i] == '=')
+    {
+      paddingSize++;
+    } // Check of characters after padding, and validity of characters
+    else if (paddingSize > 0 || !lookup[static_cast<unsigned char>(input[i])])
+    {
+      return false; // Invalid character
+    }
+  }
+
+  // Max allowed padding chars
+  if (paddingSize > 2)
+    return false;
+
+  return true;
+}
+
+bool UTILS::BASE64::AddPadding(std::string& base64str)
+{
+  const int mod = static_cast<int>(base64str.length() % 4);
+  if (mod > 0)
+  {
+    for (int i = 4 - mod; i > 0; --i)
+    {
+      base64str.push_back(PADDING);
+    }
+    return true;
+  }
+  return false;
 }
