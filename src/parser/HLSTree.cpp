@@ -1522,18 +1522,16 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
         continue;
       }
 
-      // Work around broken very high peak bandwidth to avoid very low resolution
-      //! @todo: This is likely to cause buffering pauses. Implement setting value.
+      // In case avarage bandwidth is known, just use it
       uint32_t bandwidth = STRING::ToUint32(attribs["BANDWIDTH"]);
       if (STRING::KeyExists(attribs, "AVERAGE-BANDWIDTH"))
       {
         uint32_t averageBandwidth = STRING::ToUint32(attribs["AVERAGE-BANDWIDTH"]);
-        uint32_t bandwidthLimit = averageBandwidth / 2 * 3;
-        if (bandwidth > bandwidthLimit)
+        if (bandwidth > averageBandwidth)
         {
-          LOG::Log(LOGWARNING, "Working around very high EXT-X-STREAM-INF peak/avg-bandwidth ratio (%s)",
+          LOG::Log(LOGWARNING, "Using EXT-X-STREAM-INF average-bandwidth (%s)",
                    tagValue.c_str());
-          bandwidth = bandwidthLimit;
+          bandwidth = averageBandwidth;
         }
       }
 
